@@ -1,4 +1,5 @@
 import os
+import re
 import subprocess
 import tempfile
 from PyQt6.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QPushButton, QProgressBar, QLabel, QWidget, QHBoxLayout, QFrame
@@ -171,6 +172,53 @@ class DriverInstallerApp(QMainWindow):
             self.language_button.setIcon(QIcon(os.path.join(os.getcwd(), "resources/tr_flag.png")))
             self.is_turkish = True
 
+    import re
+
+    def extract_driver_name(self, inf_path):
+        """
+        Tries to extract the driver name from the .inf file.
+        Searches for common sections and keys like [Strings], ComponentDesc, DriverName, etc.
+        """
+        try:
+            with open(inf_path, "r", encoding="utf-8") as file:
+                content = file.readlines()
+
+            # Define patterns to search for driver names
+            patterns = [
+                r"DriverName\s*=\s*(.*)",  # Matches lines like "DriverName = XYZ"
+                r"ComponentDesc\s*=\s*(.*)",  # Matches lines like "ComponentDesc = XYZ"
+                r"%\w+%\s*=\s*(.*)",  # Matches lines with variables like "%Realtek% = XYZ"
+                r"DeviceName\s*=\s*(.*)",  # Matches lines like "DeviceName = XYZ"
+            ]
+
+            # Search for matches in the content
+            for line in content:
+                for pattern in patterns:
+                    match = re.search(pattern, line, re.IGNORECASE)
+                    if match:
+                        # Return the first match found, stripped of whitespace
+                        return match.group(1).strip()
+
+            # Fallback: Check [Strings] section for clues
+            strings_section = False
+            for line in content:
+                if "[Strings]" in line:
+                    strings_section = True
+                elif line.startswith("[") and strings_section:
+                    # Exit if another section starts
+                    break
+                elif strings_section:
+                    # Look for potential driver names in the Strings section
+                    match = re.search(r"=\s*\"(.*)\"", line)
+                    if match:
+                        return match.group(1).strip()
+
+            # If no name found, return the file name as fallback
+            return os.path.basename(inf_path)
+        except Exception as e:
+            # In case of error, return a generic name
+            return f"Bilinmeyen Driver ({os.path.basename(inf_path)})"
+
     def start_installation(self):
         drivers_path = os.path.join(os.getcwd(), "drivers")
         if not os.path.exists(drivers_path):
@@ -188,10 +236,13 @@ class DriverInstallerApp(QMainWindow):
 
         for i, inf_file in enumerate(inf_files, start=1):
             inf_path = os.path.join(drivers_path, inf_file)
+            driver_name = self.extract_driver_name(inf_path)  # Get the driver name
             if self.install_driver(inf_path):
                 success_count += 1
+                self.show_feedback(f"{driver_name} yüklendi!", error=False)
             else:
-                failed_files.append(inf_file)
+                failed_files.append(driver_name)
+                self.show_feedback(f"{driver_name} yüklenemedi!", error=True)
 
             self.progress_bar.setValue(i)
 
@@ -199,7 +250,8 @@ class DriverInstallerApp(QMainWindow):
             failed_list = ", ".join(failed_files)
             self.show_feedback(f"Aşağıdaki driver(lar) yüklenemedi: {failed_list}", error=True)
         else:
-            self.show_feedback(f"Tüm driver yüklemeleri başarıyla tamamlandı! ({success_count}/{len(inf_files)})", error=False)
+            self.show_feedback(f"Tüm driver yüklemeleri başarıyla tamamlandı! ({success_count}/{len(inf_files)})",
+                               error=False)
 
     def install_driver(self, inf_path):
         temp_dir = tempfile.gettempdir()
