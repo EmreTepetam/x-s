@@ -1,16 +1,29 @@
 import os
 import subprocess
 import tempfile
-from PyQt6.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QPushButton, QProgressBar, QLabel, QWidget, QHBoxLayout
-from PyQt6.QtCore import Qt, QSize, QTimer, QPropertyAnimation
+from PyQt6.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QPushButton, QProgressBar, QLabel, QWidget, QHBoxLayout, QFrame
+from PyQt6.QtCore import Qt, QSize, QTimer
 from PyQt6.QtGui import QPixmap, QIcon, QPalette, QLinearGradient, QBrush, QColor
-
 
 class DriverInstallerApp(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Driver Yükleyici")
         self.setGeometry(100, 100, 600, 400)
+        self.setStyleSheet("color: #333333;")  # Sadece metin için renk
+
+        # Gradient Colors and Timer
+        self.gradient_colors = [(255, 255, 255), (173, 216, 230), (176, 224, 230)]  # Beyaz, açık mavi, buz mavisi
+        self.current_color_index = 0
+        self.next_color_index = 1
+        self.transition_step = 0
+        self.timer = QTimer(self)
+        self.timer.timeout.connect(self.update_background)
+        self.timer.start(50)  # 50ms'de bir güncelleme
+
+        # Başlangıç Renkleri
+        self.current_color = self.gradient_colors[self.current_color_index]
+        self.next_color = self.gradient_colors[self.next_color_index]
 
         # Main Layout
         main_layout = QVBoxLayout()
@@ -21,7 +34,7 @@ class DriverInstallerApp(QMainWindow):
         # Title Label
         self.title_label = QLabel("Driver Yükleyici", self)
         self.title_label.setAlignment(Qt.AlignmentFlag.AlignLeft)
-        self.title_label.setStyleSheet("font-size: 18px; font-weight: bold; color: #FFFFFF;")
+        self.title_label.setStyleSheet("font-size: 18px; font-weight: bold; color: #87CEEB;")
         top_layout.addWidget(self.title_label)
 
         # Spacer to push language button to the right
@@ -41,22 +54,33 @@ class DriverInstallerApp(QMainWindow):
         # Add Top Layout to Main Layout
         main_layout.addLayout(top_layout)
 
+        # Logo Frame
+        self.logo_frame = QFrame(self)
+        self.logo_frame.setStyleSheet("""
+            QFrame {
+                background-color: #E0F7FA;
+                border-radius: 20px;
+                padding: 20px;
+                border: 2px solid #0083CA;
+            }
+        """)
+        self.logo_frame.setFixedSize(350, 170)
+
         # Logo
-        self.logo_label = QLabel(self)
+        self.logo_label = QLabel(self.logo_frame)
         self.logo_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         logo_path = os.path.join(os.getcwd(), "resources/logo.png")
         if os.path.exists(logo_path):
             pixmap = QPixmap(logo_path)
-            self.logo_label.setPixmap(pixmap)
-            self.logo_label.setScaledContents(True)
-            self.logo_label.setFixedSize(200, 200)  # Başlangıç boyutu
+            scaled_pixmap = pixmap.scaled(QSize(200, 200), Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
+            self.logo_label.setPixmap(scaled_pixmap)
         else:
             self.logo_label.setText("Logo Bulunamadı")
             self.logo_label.setStyleSheet("color: red; font-size: 12px;")
-        main_layout.addWidget(self.logo_label)
+        self.logo_label.setGeometry(25, 25, 300, 120)
 
-        # Start Logo Animation
-        self.start_logo_animation()
+        # Add Logo Frame to Main Layout
+        main_layout.addWidget(self.logo_frame, alignment=Qt.AlignmentFlag.AlignCenter)
 
         # Feedback Label (for messages)
         self.feedback_label = QLabel("", self)
@@ -103,23 +127,11 @@ class DriverInstallerApp(QMainWindow):
         central_widget.setLayout(main_layout)
         self.setCentralWidget(central_widget)
 
-        # Gradient Animation
-        self.gradient_colors = [(239, 239, 239), (137, 208, 249), (51, 51, 51)]  # Renkler: kırmızı, yeşil, mavi
-        self.current_color_index = 0
-        self.next_color_index = 1
-        self.timer = QTimer(self)
-        self.timer.timeout.connect(self.update_background)
-        self.timer.start(50)  # 50ms'de bir güncelle
-
-        # Başlangıç rengi
-        self.current_color = self.gradient_colors[self.current_color_index]
-        self.next_color = self.gradient_colors[self.next_color_index]
-        self.transition_step = 0
-
-
+        # Language State
+        self.is_turkish = True  # Default language is Turkish
 
     def update_background(self):
-        # Geçiş oranını artır
+        """Arka plan renk geçişini günceller."""
         self.transition_step += 0.01
         if self.transition_step >= 1:
             self.transition_step = 0
@@ -132,42 +144,88 @@ class DriverInstallerApp(QMainWindow):
         r = int(self.current_color[0] * (1 - self.transition_step) + self.next_color[0] * self.transition_step)
         g = int(self.current_color[1] * (1 - self.transition_step) + self.next_color[1] * self.transition_step)
         b = int(self.current_color[2] * (1 - self.transition_step) + self.next_color[2] * self.transition_step)
+
         self.set_background_color(r, g, b)
 
     def set_background_color(self, r, g, b):
+        """Arka plan rengini ayarlar."""
         palette = self.palette()
         gradient = QLinearGradient(0, 0, self.width(), self.height())
         gradient.setColorAt(0, QColor(r, g, b))
-        gradient.setColorAt(1, QColor(255 - r, 255 - g, 255 - b))  # Zıt renk
+        gradient.setColorAt(1, QColor(255, 255, 255))  # Beyaza doğru geçiş
         brush = QBrush(gradient)
         palette.setBrush(QPalette.ColorRole.Window, brush)
         self.setPalette(palette)
 
-    def start_logo_animation(self):
-        """Logoya bir büyütme/küçültme animasyonu ekler."""
-        self.animation = QPropertyAnimation(self.logo_label, b"size")
-        self.animation.setDuration(1000)  # 1 saniyede bir döngü
-        self.animation.setStartValue(QSize(200, 200))  # Başlangıç boyutu
-        self.animation.setEndValue(QSize(220, 220))  # Büyütülmüş boyut
-        self.animation.setLoopCount(-1)  # Sonsuz döngü
-        self.animation.start()
-
     def toggle_language(self):
         if self.is_turkish:
+            # Switch to English
             self.title_label.setText("Driver Installer")
             self.install_button.setText("Install Driver")
             self.language_button.setIcon(QIcon(os.path.join(os.getcwd(), "resources/en_flag.png")))
             self.is_turkish = False
         else:
+            # Switch to Turkish
             self.title_label.setText("Driver Yükleyici")
             self.install_button.setText("Driver Yükle")
             self.language_button.setIcon(QIcon(os.path.join(os.getcwd(), "resources/tr_flag.png")))
             self.is_turkish = True
 
     def start_installation(self):
-        # Sürücü yükleme işlemi (hatalar ve başarılar burada işlenir)
-        pass
+        drivers_path = os.path.join(os.getcwd(), "drivers")
+        if not os.path.exists(drivers_path):
+            self.show_feedback("Driver klasörü bulunamadı!", error=True)
+            return
 
+        inf_files = [f for f in os.listdir(drivers_path) if f.endswith(".inf")]
+        if not inf_files:
+            self.show_feedback("Driver klasöründe .inf dosyası bulunamadı!", error=True)
+            return
+
+        self.progress_bar.setMaximum(len(inf_files))
+        success_count = 0
+        failed_files = []
+
+        for i, inf_file in enumerate(inf_files, start=1):
+            inf_path = os.path.join(drivers_path, inf_file)
+            if self.install_driver(inf_path):
+                success_count += 1
+            else:
+                failed_files.append(inf_file)
+
+            self.progress_bar.setValue(i)
+
+        if failed_files:
+            failed_list = ", ".join(failed_files)
+            self.show_feedback(f"Aşağıdaki driver(lar) yüklenemedi: {failed_list}", error=True)
+        else:
+            self.show_feedback(f"Tüm driver yüklemeleri başarıyla tamamlandı! ({success_count}/{len(inf_files)})", error=False)
+
+    def install_driver(self, inf_path):
+        temp_dir = tempfile.gettempdir()
+        log_file = os.path.join(temp_dir, "driver_installation.log")
+        try:
+            result = subprocess.run(
+                ["pnputil", "/add-driver", inf_path, "/install"],
+                capture_output=True,
+                text=True,
+                check=True
+            )
+            with open(log_file, "a") as log:
+                log.write(f"SUCCESS: {inf_path} yüklendi.\n")
+            return True
+        except subprocess.CalledProcessError as e:
+            with open(log_file, "a") as log:
+                log.write(f"ERROR: {inf_path} yüklenemedi.\n{e.stderr}\n")
+            return False
+
+    def show_feedback(self, message, error=False):
+        """Show feedback above the progress bar."""
+        self.feedback_label.setText(message)
+        if error:
+            self.feedback_label.setStyleSheet("font-size: 12px; color: #FF0000;")  # Red for errors
+        else:
+            self.feedback_label.setStyleSheet("font-size: 12px; color: #008000;")  # Green for success
 
 if __name__ == "__main__":
     import sys
