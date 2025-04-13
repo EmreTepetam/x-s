@@ -1,0 +1,34 @@
+{
+    "title_name": {
+        "tr": "Sürücü Kurulum Aracı",
+        "en": "Driver Installation Tool"
+    },
+  "driver_name": {
+    "tr": "Realtek Donanım Destek Uygulaması",
+    "en": "Realtek Hardware Support Application"
+  },
+  "install_button": {
+    "tr": "Sürücü Yükle",
+    "en": "Install Driver"
+  },
+  "success_message": {
+    "tr": "Sürücü yüklemesi başarıyla tamamlandı!",
+    "en": "Driver installation completed successfully!"
+  },
+  "already_exists_message": {
+    "tr": "Sürücü zaten sistemde yüklü.",
+    "en": "Driver is already installed."
+  },
+  "error_message": {
+    "tr": "Yükleme sırasında bir hata oluştu.",
+    "en": "An error occurred during installation."
+  },
+  "loading_message": {
+    "tr": "Yükleme başlatıldı...",
+    "en": "Installation started..."
+  },
+      "unexpected_error_message": {
+    "tr": "{driver_name} yüklenemedi: Beklenmeyen bir hata oluştu: {error_details}",
+    "en": "{driver_name} could not be installed: An unexpected error occurred: {error_details}"
+  }
+}
